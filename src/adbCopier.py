@@ -252,43 +252,147 @@ def fix_braces(a_file):
     ans = a_file.replace("[","%5B")
     ans = ans.replace("]","%5D")
     return ans
+    
 
 
 def generate_play_list(src):
 
+    # json.load("/Users/vj/Music/mem_1661362457.json")
     files = walk_music(src+"/Vijay_Music_Library")
 
-    file_name = f'{src}/startup_{int(time.time())}.m3u'
+    file_name = f'{src}/android_{int(time.time())}.sh'
 
     f_ptr=open(file_name,'w')
 
+    mem = {}
+
     for a_file in files:
 
-        f_ptr.write(fix_braces(a_file))
+        a,b,c=getPath(a_file,src+"/Vijay_Music_Library/")
+        if c not in mem:
+            mem[c] = []
+        mem[c].append(a)
+
+        content = f'./adb shell mkdir \"/storage/sdcard0/Music/{c}\"'
+        f_ptr.write(content)
+        f_ptr.write("\n")
+        content = f'./adb push \"{a}\" \"/storage/sdcard0/Music/{c}\"'
+        f_ptr.write(content)
         f_ptr.write("\n")
 
     f_ptr.close()
 
+    file_name = f'{src}/mem_{int(time.time())}.json'
+    f_ptr=open(file_name,'w')
+    f_ptr.write(json.dumps(mem))
+    f_ptr.close()
 
     return file_name
+
+
+def generate_play_listV2(src):
+
+    
+    # files = walk_music(src+"/Vijay_Music_Library")
+
+    file_name = f'{src}/android_{int(time.time())}.sh'
+
+    f_ptr=open(file_name,'w')
+
+    mem =  json.load(open("/Users/vj/Music/mem_1661363078.json"))
+
+    for album in mem:
+
+        songsInpath = mem[album]
+        
+        content = f'./adb shell mkdir \"/storage/sdcard0/Music/{album}\"'
+        f_ptr.write(content)
+        f_ptr.write("\n")
+        for song in songsInpath:
+            content = f'./adb push \"{song}\" \"/storage/sdcard0/Music/{album}\"'
+            f_ptr.write(content)
+            f_ptr.write("\n")
+
+    f_ptr.close()
+
+    return file_name
+
+def generate_play_listV3(src):
+
+    
+    # files = walk_music(src+"/Vijay_Music_Library")
+
+    file_name = f'{src}/android_{int(time.time())}.sh'
+
+    f_ptr=open(file_name,'w')
+
+    counter = 0 
+    i=-1
+    album=""
+    r_ptr= open("/Users/vj/Music/process.m3u",'r').read().splitlines()
+
+    for mem in r_ptr:
+        
+        if(counter % 75 ==0):
+            i=i+1
+            album = f'folder_{i}';
+            content = f'./adb shell mkdir \"/storage/sdcard0/Music/{album}\"'
+            f_ptr.write(content)
+            f_ptr.write("\n")
+            
+      
+        content = f'./adb push \"{mem}\" \"/storage/sdcard0/Music/{album}\"'
+        f_ptr.write(content)
+        f_ptr.write("\n")
+        counter = counter+1
+
+    f_ptr.close()
+
+    return file_name
+
+
+def splitFile(src,breakingPoint):
+
+    file_names = []
+
+    fptr= open(src,'r').read().splitlines()
+
+    fname='part_0.sh'
+    wptr = open(fname,'w')
+    file_names.append(fname)
+    i=0
+    for line in fptr:
+        if i!=0 and i%breakingPoint == 0:
+            fname = f'part_{i}.sh'  
+            wptr.close()
+            wptr = open(fname,'w')
+            file_names.append(fname)
+
+        wptr.write(line)
+        wptr.write("\n")
+        i = i+1
+
+
+
+    return file_names
 
 
 
 def main():
 
-    (persist ,move ,debug,stopCount,playListSrcPath,destinationPath)=process_args(sys.argv[1:])
+    # (persist ,move ,debug,stopCount,playListSrcPath,destinationPath)=process_args(sys.argv[1:])
 
-    fileData=walk_music(playListSrcPath)
-    processedOutput=process(fileData,debug,stopCount,destinationPath)
+    # fileData=walk_music(playListSrcPath)
+    # processedOutput=process(fileData,debug,stopCount,destinationPath)
 
-    if move:
-        moveFiles(processedOutput["passed"])
-        moveFiles(processedOutput["failed"])
-    if persist:
-        persistFile("passed",processedOutput["passed"])
-        persistFile("failed",processedOutput["failed"])
+    # if move:
+    #     moveFiles(processedOutput["passed"])
+    #     moveFiles(processedOutput["failed"])
+    # if persist:
+    #     persistFile("passed",processedOutput["passed"])
+    #     persistFile("failed",processedOutput["failed"])
 
-    opPath=generate_play_list("/Users/vj/Music")
+    opPath=splitFile("/Users/vj/Music/android_1661365483.sh",100)
 
     print("new playlist generated at ",opPath)
 
